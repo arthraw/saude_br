@@ -1,0 +1,199 @@
+version: 7.0.4
+
+type: DeclarativeSource
+
+check:
+  type: CheckStream
+  stream_names:
+    - estabelecimentos
+
+streams:
+  - type: DeclarativeStream
+    name: estabelecimentos
+    retriever:
+      type: SimpleRetriever
+      decoder:
+        type: JsonDecoder
+      paginator:
+        type: DefaultPaginator
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          inject_on_first_request: true
+      requester:
+        type: HttpRequester
+        url: https://apidadosabertos.saude.gov.br/cnes/estabelecimentos
+        http_method: GET
+        request_parameters:
+          limit: "20"
+          status: "1"
+          data_atualizacao: "{{ now_utc().strftime('%Y-%m-%d') }}"
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - estabelecimentos
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        properties:
+          codigo_cnes:
+            type:
+              - number
+              - "null"
+          numero_cnpj_entidade:
+            type:
+              - string
+              - "null"
+          nome_razao_social:
+            type:
+              - string
+              - "null"
+          nome_fantasia:
+            type:
+              - string
+              - "null"
+          tipo_gestao:
+            type:
+              - string
+              - "null"
+          descricao_esfera_administrativa:
+            type:
+              - string
+              - "null"
+          codigo_tipo_unidade:
+            type:
+              - number
+              - "null"
+          codigo_cep_estabelecimento:
+            type:
+              - string
+              - "null"
+          endereco_estabelecimento:
+            type:
+              - string
+              - "null"
+          numero_estabelecimento:
+            type:
+              - string
+              - "null"
+          bairro_estabelecimento:
+            type:
+              - string
+              - "null"
+          numero_telefone_estabelecimento:
+            type:
+              - string
+              - "null"
+          latitude_estabelecimento_decimo_grau:
+            type:
+              - number
+              - "null"
+          longitude_estabelecimento_decimo_grau:
+            type:
+              - number
+              - "null"
+          endereco_email_estabelecimento:
+            type:
+              - string
+              - "null"
+          numero_cnpj:
+            type:
+              - string
+              - "null"
+          codigo_identificador_turno_atendimento:
+            type:
+              - string
+              - "null"
+          descricao_turno_atendimento:
+            type:
+              - string
+              - "null"
+          estabelecimento_faz_atendimento_ambulatorial_sus:
+            type:
+              - string
+              - "null"
+          codigo_estabelecimento_saude:
+            type:
+              - string
+              - "null"
+          codigo_uf:
+            type:
+              - number
+              - "null"
+          codigo_municipio:
+            type:
+              - number
+              - "null"
+          descricao_natureza_juridica_estabelecimento:
+            type:
+              - string
+              - "null"
+          estabelecimento_possui_centro_cirurgico:
+            type:
+              - number
+              - "null"
+          estabelecimento_possui_centro_obstetrico:
+            type:
+              - number
+              - "null"
+          estabelecimento_possui_centro_neonatal:
+            type:
+              - number
+              - "null"
+          estabelecimento_possui_atendimento_hospitalar:
+            type:
+              - number
+              - "null"
+          estabelecimento_possui_servico_apoio:
+            type:
+              - number
+              - "null"
+          estabelecimento_possui_atendimento_ambulatorial:
+            type:
+              - number
+              - "null"
+          codigo_atividade_ensino_unidade:
+            type:
+              - string
+              - "null"
+          codigo_esfera_administrativa_unidade:
+            type:
+              - string
+              - "null"
+          data_atualizacao:
+            type:
+              - string
+              - "null"
+        additionalProperties: true
+
+spec:
+  type: Spec
+  connection_specification:
+    type: object
+    properties: {}
+
+metadata:
+  testedStreams:
+    stream_0:
+      streamHash: ad11f9fa446b445a056b0f48d54e74059e0bc977
+    estabelecimentos:
+      isStale: false
+      hasRecords: true
+      streamHash: da769202ac35bd271f227fa9d6a6fbde63f784d6
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+  autoImportSchema:
+    estabelecimentos: true
+
+concurrency_level:
+  type: ConcurrencyLevel
+  default_concurrency: 1
