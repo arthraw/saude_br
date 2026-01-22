@@ -32,16 +32,6 @@ O pipeline é dividido em três camadas principais dentro do Databricks:
 
 - **Orquestração**: Apache Airflow.
 
-- **Modelagem**: Star Schema / Galaxy Schema.
+- **Modelagem**: Star Schema.
 
 - **Ingestão**: Airbyte.
-
-📊 Modelo de Dados (Galaxy Schema)
-======
-O projeto utiliza múltiplas tabelas fato que compartilham as mesmas dimensões para permitir cruzamentos analíticos complexos.
-
-- Fato Estabelecimento: Métricas de infraestrutura (Centro cirúrgico, atendimento SUS).
-
-- Fato Estoque: Saldo de medicamentos por lote e validade.
-
-- Dimensões: Estabelecimento, Localização (Enriquecida), Medicamento e Calendário.
