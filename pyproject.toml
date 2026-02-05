@@ -1,0 +1,24 @@
+[project]
+name = "saude-br"
+version = "0.1.0"
+description = "Projeto de ETL com dados do SUS"
+authors = [
+    {name = "arthraw", email = "arthursallesandrade@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "apache-airflow-providers-microsoft-azure>=12.10.3",
+    "apache-airflow-providers-airbyte>=5.3.2",
+    "apache-airflow-providers-http>=5.6.4",
+    "astro-sdk-python>=1.8.1",
+    "apache-airflow-providers-databricks (>=7.9.0,<8.0.0)",
+    "pytest (>=9.0.2,<10.0.0)"
+]
+
+[tool.poetry]
+package-mode = false
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
