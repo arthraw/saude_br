@@ -1,6 +1,7 @@
-from airflow.sdk import dag, task
+from airflow.sdk import dag, task, task_group
 from airflow.providers.airbyte.operators.airbyte import AirbyteTriggerSyncOperator
 from airflow.providers.databricks.hooks.databricks import DatabricksHook
+from airflow.providers.databricks.operators.databricks import DatabricksSubmitRunOperator
 from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.models import Variable
 from pendulum import datetime, now
@@ -33,71 +34,41 @@ def saude_sus_ingestion_dag():
         connection_id=AIRBYTE_CONNECTION_ID,
         deferrable=True
     )
-
-    @task(task_id="run_estabelecimento_staging_data_copy_to_bronze")
-    def run_estabelecimento_staging_data_copy_to_bronze():
-        run_json = {
-            'run_name': f'Copy Estabelecimento Transient Data To Bronze - {now().strftime("%Y-%m-%d_%H:%M:%S")}',
-            'tasks': [{
-                'task_key': 'estabelecimento_transient_to_bronze_task',
-                'notebook_task': {
-                    'notebook_path': DATABRICKS_ROOT_PROJECT_PATH + "estabelecimentos/Transient_to_Bronze"
-                },
-                'serverless': {}
-            }]
-        }
-        try:
-            hook = DatabricksHook(databricks_conn_id=DATABRICKS_CONN_ID)
-            run_id = hook.submit_run(run_json)        
-
-            result_test = hook.get_run(run_id)
-            life_cycle_state = result_test.get("state", {}).get("life_cycle_state", "")
-
-            while life_cycle_state not in ["TERMINATED", "SUCCESS", "INTERNAL_ERROR"]:
-                import time 
-                time.sleep(30)  # Wait for 30 seconds before checking the status again
-                result_test = hook.get_run(run_id)
-                life_cycle_state = result_test.get("state", {}).get("life_cycle_state", "")
-                print(f"Job {run_id} state: {life_cycle_state}")
-            
-            print(f"Job {run_id} finished with state: {life_cycle_state}")
-        except Exception as e:
-            print(f"Error while running copy task in databricks: {str(e)}")
-
-    @task(task_id="run_tipo_unidade_staging_data_copy_to_bronze")
-    def run_tipo_unidade_staging_data_copy_to_bronze():
-        run_json = {
-            'run_name': f'Copy Tipo Unidade Transient Data To Bronze - {now().strftime("%Y-%m-%d_%H:%M:%S")}',
-            'tasks': [{
-                'task_key': 'tipo_unidade_transient_to_bronze_task',
-                'notebook_task': {
-                    'notebook_path': DATABRICKS_ROOT_PROJECT_PATH + "tipo_unidade/Transient_to_Bronze"
-                },
-                'serverless': {}
-            }]
-        }
-        try:
-            hook = DatabricksHook(databricks_conn_id=DATABRICKS_CONN_ID)
-            run_id = hook.submit_run(run_json)        
-
-            result_test = hook.get_run(run_id)
-            life_cycle_state = result_test.get("state", {}).get("life_cycle_state", "")
-
-            while life_cycle_state not in ["TERMINATED", "SUCCESS", "INTERNAL_ERROR"]:
-                import time 
-                time.sleep(30)  # Wait for 30 seconds before checking the status again
-                result_test = hook.get_run(run_id)
-                life_cycle_state = result_test.get("state", {}).get("life_cycle_state", "")
-                print(f"Job {run_id} state: {life_cycle_state}")
-            
-            print(f"Job {run_id} finished with state: {life_cycle_state}")
-        except Exception as e:
-            print(f"Error while running copy task in databricks: {str(e)}")
-
-
-    copy_estabelecimento_data_staging_to_raw = run_estabelecimento_staging_data_copy_to_bronze()
-    copy_tipo_unidade_data_staging_to_raw = run_tipo_unidade_staging_data_copy_to_bronze()
     
+    @task_group(
+        group_id="ingestion_to_raw",
+        tooltip="Tasks to copy data from staging to bronze layer in Databricks",
+        ui_color="#4eb7f0"
+    )
+    def ingestion_to_raw():
+        copy_estabelecimento = DatabricksSubmitRunOperator(
+            task_id="run_estabelecimento_staging_data_copy_to_bronze",
+            databricks_conn_id=DATABRICKS_CONN_ID,
+            json={
+                'run_name': 'Copy Operation Estabelecimento - ' + now().strftime("%Y-%m-%d_%H:%M:%S"),
+                'tasks': [{
+                    'task_key': 'copy_estabelecimento_task',
+                    'notebook_task': {'notebook_path': f"{DATABRICKS_ROOT_PROJECT_PATH}estabelecimentos/Transient_to_Bronze"},
+                    'serverless': {}
+                }]
+            }
+        )
+
+        copy_tipo_unidade = DatabricksSubmitRunOperator(
+            task_id="run_tipo_unidade_staging_data_copy_to_bronze",
+            databricks_conn_id=DATABRICKS_CONN_ID,
+            json={
+                'run_name': 'Copy Operation Tipo Unidade - ' + now().strftime("%Y-%m-%d_%H:%M:%S"),
+                'tasks': [{
+                    'task_key': 'copy_tipo_unidade_task',
+                    'notebook_task': {'notebook_path': f"{DATABRICKS_ROOT_PROJECT_PATH}tipo_unidade/Transient_to_Bronze"},
+                    'serverless': {}
+                }]
+            }
+        )
+        [copy_estabelecimento, copy_tipo_unidade]
+
+
     trigger_transformation_dag = TriggerDagRunOperator(
         task_id='trigger_transformation_dag',
         trigger_dag_id='estabelecimento_transformation',
@@ -105,6 +76,6 @@ def saude_sus_ingestion_dag():
         poke_interval=30
     )
 
-    ingest_from_airbyte >> [copy_estabelecimento_data_staging_to_raw, copy_tipo_unidade_data_staging_to_raw] >> trigger_transformation_dag
+    ingest_from_airbyte >> ingestion_to_raw() >> trigger_transformation_dag
 
 saude_sus_ingestion_dag()
